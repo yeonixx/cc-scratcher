@@ -5,18 +5,7 @@ const redis = new Redis({
   token: process.env.KV_REST_API_TOKEN,
 });
 
-function generateTicket() {
-  const winPool = [
-    { sym: 'joker',    w: 600 },
-    { sym: 'chips',    w: 300 },
-    { sym: 'seven',    w: 90  },
-    { sym: 'goldbars', w: 10  },
-  ];
-  const total = winPool.reduce((s, i) => s + i.w, 0);
-  let r = Math.random() * total;
-  let winSym = winPool[winPool.length - 1].sym;
-  for (const item of winPool) { r -= item.w; if (r <= 0) { winSym = item.sym; break; } }
-
+function generateTicket(winSym) {
   const winRow = Math.random() < 0.5 ? 0 : 1;
   const otherRow = 1 - winRow;
   const slots = new Array(6);
@@ -62,10 +51,10 @@ export default async function handler(req, res) {
   const secret = req.headers['x-shopify-secret'];
   if (secret !== process.env.WEBHOOK_SECRET) return res.status(401).json({ error: 'Unauthorized' });
 
-  const { token, orderEmail, orderName } = req.body;
-  if (!token) return res.status(400).json({ error: 'Missing token' });
+  const { token, winSym, orderEmail, orderName } = req.body;
+  if (!token || !winSym) return res.status(400).json({ error: 'Missing token or winSym' });
 
-  const ticket = generateTicket();
+  const ticket = generateTicket(winSym);
 
   await redis.set(`ticket:${token}`, JSON.stringify({
     ...ticket,

@@ -1,5 +1,5 @@
 import { handleCors } from './cors.js';
-import { redisGet, redisSet } from './redis.js';
+import { redisGet } from './redis.js';
 
 export default async function handler(req, res) {
   if (handleCors(req, res)) return;
@@ -28,6 +28,8 @@ export default async function handler(req, res) {
       winRow: ticket.winRow,
       orderEmail: ticket.orderEmail,
       orderName: ticket.orderName,
+      discountCode: ticket.discountCode || null,
+      prizeMessage: ticket.prizeMessage || null,
     });
   } catch (err) {
     console.error(err);

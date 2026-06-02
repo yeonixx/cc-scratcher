@@ -1,5 +1,5 @@
 import { handleCors } from './cors.js';
-import { redisGet, redisSet } from './redis.js';
+import { redisSet } from './redis.js';
 
 export default async function handler(req, res) {
   if (handleCors(req, res)) return;
@@ -12,12 +12,14 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const { token, slots, winSym, winRow, orderEmail, orderName } = req.body;
+  const { token, slots, winSym, winRow, orderEmail, orderName, discountCode, prizeMessage } = req.body;
   if (!token) return res.status(400).json({ error: 'Missing token' });
 
   try {
     await redisSet(`ticket:${token}`, JSON.stringify({
       token, slots, winSym, winRow, orderEmail, orderName,
+      discountCode: discountCode || null,
+      prizeMessage: prizeMessage || null,
       used: false,
       createdAt: new Date().toISOString(),
     }));

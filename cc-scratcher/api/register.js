@@ -8,8 +8,15 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (req.headers['x-shopify-secret'] !== process.env.WEBHOOK_SECRET) {
-    return res.status(401).json({ error: 'Unauthorized' });
+  const incoming = req.headers['x-shopify-secret'];
+  const expected = process.env.WEBHOOK_SECRET;
+
+  console.log('incoming secret:', incoming);
+  console.log('expected secret:', expected);
+  console.log('body:', JSON.stringify(req.body));
+
+  if (incoming !== expected) {
+    return res.status(401).json({ error: 'Unauthorized', incoming, expected });
   }
 
   const { token, slots, winSym, winRow, orderEmail, orderName, discountCode, prizeMessage } = req.body;

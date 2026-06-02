@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     const data = await redis.get(`ticket:${token}`);
     if (!data) return res.status(200).json({ valid: false, used: false });
 
-    const ticket = JSON.parse(data);
+    const ticket = typeof data === 'string' ? JSON.parse(data) : data;
     return res.status(200).json({
       valid: true,
       used: ticket.used || false,
@@ -26,6 +26,6 @@ export default async function handler(req, res) {
       prizeMessage: ticket.prizeMessage || null,
     });
   } catch(e) {
-    return res.status(500).json({ valid: false, error: 'Server error' });
+    return res.status(500).json({ valid: false, error: e.message });
   }
 }

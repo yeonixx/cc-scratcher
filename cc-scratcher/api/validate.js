@@ -1,31 +1,48 @@
-import { Redis } from '@upstash/redis';
+import { createClient } from '@upstash/redis';
+import { handleCors } from './_cors.js';
 
-const redis = new Redis({
+const redis = createClient({
   url: process.env.KV_REST_API_URL,
   token: process.env.KV_REST_API_TOKEN,
 });
 
 export default async function handler(req, res) {
-  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  // Handle CORS preflight (fixes 405 on OPTIONS)
+  if (handleCors(req, res)) return;
 
-  const { token } = req.query;
-  if (!token) return res.status(400).json({ error: 'Missing token' });
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Use WHATWG URL API instead of deprecated url.parse()
+  const baseUrl = `https://${req.headers.host}`;
+  const { searchParams } = new URL(req.url, baseUrl);
+  const token = searchParams.get('token');
+
+  if (!token) {
+    return res.status(400).json({ error: 'Missing token' });
+  }
 
   try {
-    const data = await redis.get(`ticket:${token}`);
-    if (!data) return res.status(200).json({ valid: false, used: false });
+    const raw = await redis.get(`ticket:${token}`);
 
-    const ticket = typeof data === 'string' ? JSON.parse(data) : data;
+    if (!raw) {
+      return res.status(404).json({ valid: false, error: 'Token not found' });
+    }
+
+    const ticket = typeof raw === 'string' ? JSON.parse(raw) : raw;
+
     return res.status(200).json({
       valid: true,
       used: ticket.used || false,
       slots: ticket.slots,
       winSym: ticket.winSym,
       winRow: ticket.winRow,
-      discountCode: ticket.discountCode || null,
-      prizeMessage: ticket.prizeMessage || null,
+      orderEmail: ticket.orderEmail,
+      orderName: ticket.orderName,
     });
-  } catch(e) {
-    return res.status(500).json({ valid: false, error: e.message });
+  } catch (err) {
+    console.error('Redis error:', err);
+    return res.status(500).json({ error: 'Failed to validate token' });
   }
 }

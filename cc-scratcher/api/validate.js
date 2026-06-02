@@ -6,31 +6,26 @@ const redis = new Redis({
 });
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', 'https://crookedchristian.com');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   const { token } = req.query;
-  if (!token) return res.status(400).json({ valid: false, error: 'No token' });
+  if (!token) return res.status(400).json({ error: 'Missing token' });
 
   try {
-    const raw = await redis.get(`ticket:${token}`);
-    if (!raw) return res.status(200).json({ valid: false, used: false });
+    const data = await redis.get(`ticket:${token}`);
+    if (!data) return res.status(200).json({ valid: false, used: false });
 
-    const ticket = typeof raw === 'string' ? JSON.parse(raw) : raw;
-
+    const ticket = JSON.parse(data);
     return res.status(200).json({
       valid: true,
-      used: ticket.used,
+      used: ticket.used || false,
       slots: ticket.slots,
       winSym: ticket.winSym,
       winRow: ticket.winRow,
+      discountCode: ticket.discountCode || null,
+      prizeMessage: ticket.prizeMessage || null,
     });
-  } catch (err) {
-    console.error(err);
+  } catch(e) {
     return res.status(500).json({ valid: false, error: 'Server error' });
   }
 }

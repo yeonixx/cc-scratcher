@@ -1,5 +1,5 @@
-import { handleCors } from './_cors.js';
-import { redisGet } from './_redis.js';
+import { handleCors } from './cors.js';
+import { redisGet, redisSet } from './redis.js';
 
 export default async function handler(req, res) {
   if (handleCors(req, res)) return;
